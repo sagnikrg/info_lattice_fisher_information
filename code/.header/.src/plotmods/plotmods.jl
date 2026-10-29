@@ -7,5 +7,4 @@ include("colorschemes_mods.jl")
 
 include("circplot.jl")
 include("heatmap.jl")
-
-include("finite_size_eigstat.jl")
+include("finite_size_eigstat/finite_size_eigstat.jl")

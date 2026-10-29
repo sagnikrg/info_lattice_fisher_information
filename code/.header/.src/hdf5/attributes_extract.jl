@@ -20,3 +20,11 @@ function extract_metadata(file::HDF5.File, filename::String = "metadata.txt")
         end
     end
 end
+
+function source_code(file::HDF5.File)
+    attribs = HDF5.attributes(file)
+    code=attribs["[ENV] Code"][];
+    open("source_code.jl", "w") do io
+        write(io, code)
+    end
+end

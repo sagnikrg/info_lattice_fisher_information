@@ -5,7 +5,7 @@ setlocal
 
 
 rem ====== USER CONFIG ======
-set "local_path=C:\Users\Ritam\OneDrive\Documents\Codespaces"
+set "local_path=C:\Users\Ritam\OneDrive\Documents\Codespaces\Codespace_Th"
 rem Source header repo log path (you said this exists already)
 set "SOURCE_LOG=%local_path%\notes\.bat\bibsync.log"
 rem =========================

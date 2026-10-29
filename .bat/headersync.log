@@ -453,3 +453,50 @@ Commit Hash :
 
 
 
+
+==== [29-10-2026 17:10:35.59] Header mirror run ====
+Repo        : info_lattice_fisher_information
+Source      : C:\Users\Ritam\OneDrive\Documents\Codespaces\Codespace_Th\.header\.header\.src
+Destination : C:\Users\Ritam\OneDrive\Documents\Codespaces\Codespace_Th\info_lattice_fisher_information\code\.header\.src
+Commit Msg  : sync from mbl_dtc
+Commit Hash : 
+-------------------------------------------------------------------------------
+   ROBOCOPY     ::     Robust File Copy for Windows                              
+-------------------------------------------------------------------------------
+  Started : 29 October 2026 17:10:35
+   Source : .header\.src\
+     Dest : info_lattice_fisher_information\code\.header\.src\
+    Files : *.*
+	    
+  Options : *.* /FFT /TEE /S /E /DCOPY:T /COPY:DAT /PURGE /MIR /XJ /MT:8 /R:1 /W:1 
+------------------------------------------------------------------------------
+	*EXTRA Dir        -1	info_lattice_fisher_information\code\.header\.src\eigen_statistics\symmetries\
+	  *EXTRA File 		    2924	info_lattice_fisher_information\code\.header\.src\plotmods\finite_size_eigstat.jl
+	  *EXTRA File 		       3	info_lattice_fisher_information\code\.header\.src\eigen_statistics\symmetries\symmetries.jl
+	  *EXTRA File 		     221	info_lattice_fisher_information\code\.header\.src\plotmods\finite_size_eigstat_dependencies.jl
+	  *EXTRA File 		    3536	info_lattice_fisher_information\code\.header\.src\plotmods\finite_size_eigstat_inset.jl
+	    Newer     		     729	.header\.src\hdf5\attributes_extract.jl100%  
+	    Newer     		     200	.header\.src\plotmods\plotmods.jl100%  
+	    New File  		    4056	.header\.src\plotmods\finite_size_eigstat\finite_size_eigstat.base.jl100%  
+	    New File  		     221	.header\.src\plotmods\finite_size_eigstat\finite_size_eigstat.dependencies.jl100%  
+	    New File  		    4806	.header\.src\plotmods\finite_size_eigstat\finite_size_eigstat.inset.jl100%  
+	    New File  		     606	.header\.src\plotmods\finite_size_eigstat\finite_size_eigstat.jl100%  
+	    New File  		    1325	.header\.src\plotmods\finite_size_eigstat\finite_size_eigstat.loaddata.jl100%  
+------------------------------------------------------------------------------
+               Total    Copied   Skipped  Mismatch    FAILED    Extras
+    Dirs :        14        14        13         0         0         1
+   Files :        42         7        35         0         0         4
+   Bytes :    75.3 k    11.6 k    63.6 k         0         0     6.5 k
+   Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+   Speed :            5,68,714 Bytes/sec.
+   Speed :              32.542 MegaBytes/min.
+   Ended : 29 October 2026 17:10:35
+
+==== End of run ====
+
+
+
+
+
+
+
