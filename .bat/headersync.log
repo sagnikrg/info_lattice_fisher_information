@@ -500,3 +500,49 @@ Commit Hash :
 
 
 
+
+==== [29-10-2026 17:34:02.15] Header mirror run ====
+Repo        : info_lattice_fisher_information
+Source      : C:\Users\Ritam\OneDrive\Documents\Codespaces\Codespace_Th\.header\.header\.src
+Destination : C:\Users\Ritam\OneDrive\Documents\Codespaces\Codespace_Th\info_lattice_fisher_information\code\.header\.src
+Commit Msg  : [SYNC] all functions
+Commit Hash : 
+-------------------------------------------------------------------------------
+   ROBOCOPY     ::     Robust File Copy for Windows                              
+-------------------------------------------------------------------------------
+  Started : 29 October 2026 17:34:02
+   Source : .header\.src\
+     Dest : info_lattice_fisher_information\code\.header\.src\
+    Files : *.*
+	    
+  Options : *.* /FFT /TEE /S /E /DCOPY:T /COPY:DAT /PURGE /MIR /XJ /MT:8 /R:1 /W:1 
+------------------------------------------------------------------------------
+	    New File  		    2472	.header\.src\itensor\idtcckt.jl100%  
+	    New File  		     250	.header\.src\itensor\ITensor.jl100%  
+	    New File  		    1181	.header\.src\itensor\itensor_functions.jl100%  
+	    New File  		    1530	.header\.src\itensor\itensor_mps.jl100%  
+	    New File  		     495	.header\.src\itensor\itev.jl100%  
+	    New File  		    2259	.header\.src\polfed\polfed.jl100%  
+	    New File  		    4197	.header\.src\polfed\polfed_itensor.jl100%  
+	    New File  		    4870	.header\.src\polfed\polfed_mps.jl100%  
+	    New File  		     655	.header\.src\sff\sff.jl100%  
+	    New File  		     715	.header\.src\polfed\functions\mat_mult.jl100%  
+	    New File  		     355	.header\.src\polfed\functions\overlap.jl100%  
+------------------------------------------------------------------------------
+               Total    Copied   Skipped  Mismatch    FAILED    Extras
+    Dirs :        18        18        14         0         0         0
+   Files :        53        11        42         0         0         0
+   Bytes :    93.8 k    18.5 k    75.3 k         0         0         0
+   Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+   Speed :            6,32,633 Bytes/sec.
+   Speed :              36.200 MegaBytes/min.
+   Ended : 29 October 2026 17:34:02
+
+==== End of run ====
+
+
+
+
+
+
+
