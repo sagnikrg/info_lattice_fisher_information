@@ -10,7 +10,7 @@
 # Wrapper for initial random states
 #------------------------------------
 
-function random_vector(sites)
+function random_vector(sites::Vector{<:Index})
 
     L=length(sites)
 		#psi = productMPS(sites,"↑"  )
@@ -32,7 +32,7 @@ end
 # Néel state
 #-------------------------------------
 
-function neel_state(sites)
+function neel_state(sites::Vector{<:Index})
     # Create a site set for N spin-half sites
    
 
@@ -47,7 +47,7 @@ end
 # Random Bit String
 #------------------------------------
 
-function random_bitstring(sites)
+function random_bitstring(sites::Vector{<:Index})
     # Create a site set for N spin-half sites
 
     N=length(sites)

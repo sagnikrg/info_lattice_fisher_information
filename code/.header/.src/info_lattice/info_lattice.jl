@@ -155,11 +155,11 @@ function info_lattice(U::Matrix{ComplexF64})
 
     eigvals,eigvecs=eigen(U);
 
-    Psi=eigvecs[1,:]
+    Psi=eigvecs[:,1]
     infolattice=info_lattice(Psi)
 
     for i in 2:length(eigvals)
-        Psi=eigvecs[i,:]
+        Psi=eigvecs[:,i]
         infolattice+=info_lattice(Psi)
     end
 
@@ -174,14 +174,14 @@ end
 function info_lattice_brickwall(L::Int, theta::Float64, epsilon::Float64)
 
  
-    U=brickwall(L,theta, epsilon)
+    U=circuit_dtc(L,theta, epsilon)
     eigvals,eigvecs=eigen(U);
 
-    Psi=eigvecs[1,:]
+    Psi=eigvecs[:,1]
     infolattice=info_lattice(Psi)
 
     for i in 2:length(eigvals)
-        Psi=eigvecs[i,:]
+        Psi=eigvecs[:,i]
         infolattice+=info_lattice(Psi)
     end
 
@@ -197,12 +197,12 @@ function info_lattice_proj(U::Matrix{ComplexF64}, indlist::Array{Int})
 
     eigvals,eigvecs=eigen(U);
 
-    Psi=eigvecs[1,:]
+    Psi=eigvecs[:,1]
     Psi=projectatt(Psi, indlist)
     infolattice=info_lattice(Psi)
 
     for i in 2:length(eigvals)
-        Psi=eigvecs[i,:]
+        Psi=eigvecs[:,i]
         Psi=projectatt(Psi, indlist)
         infolattice+=info_lattice(Psi)
     end

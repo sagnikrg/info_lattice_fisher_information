@@ -14,7 +14,7 @@ function inset_info_lattice(infolattice, ax_inset)
             info_lattice_sum[i]=sum(infolattice[i])
         end
 
-        file = h5open("../.header/.src/info_lattice/info_lattice_inset_data.hdf5", "r")
+        file = h5open("C:\\Users\\Ritam\\OneDrive\\Documents\\Codespaces\\Codespace_Th\\.header\\.header\\.src\\info_lattice\\info_lattice_inset_data.hdf5", "r")
         info_lattice_sum_GUE=file["GUE/info_lattice_sum/L$(L)"][:] 
         close(file)
 

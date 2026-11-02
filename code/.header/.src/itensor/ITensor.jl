@@ -8,7 +8,7 @@ using ITensorMPS
 ITensors.disable_warn_order()
 
 include("itensor_mps.jl")
-include("idtcckt.jl")
+include("i_dtc_circuit.jl")
 include("itev.jl")
 include("itensor_functions.jl")
 

@@ -8,7 +8,7 @@ ITensors.disable_warn_order()
 #################################
 
 
-include("time-crystals.jl")
+include("time_crystals.jl")
 
 
 ##################################
@@ -48,8 +48,35 @@ function itensorise(FUTensor, sites, dummysites)
     for i in 2:2:L
         push!(gates, ITensor(FUTensor[i],sites[i+1],sites[i],dummysites[i+1],dummysites[i]))
         end
-  
+
     gates
+end
+
+
+########################################################
+# itensorise for apply (prime convention)
+#
+# gates act sites -> sites' as apply expects, so they can be used
+# with brickwall_tev(psi, gatesEven, gatesOdd) from itensor/itev.jl,
+# for dense ITensor and MPS states alike.
+# Same layout as circuit_dtc(sites, ...):
+#   gatesEven = bonds (1,2),(3,4),...   (first layer)
+#   gatesOdd  = bonds (2,3),(4,5),...   (second layer)
+########################################################
+
+function itensorise(FUTensor, sites)
+    L=length(FUTensor);
+    gatesEven = ITensor[]
+    gatesOdd = ITensor[]
+    for i in 1:2:L
+        push!(gatesEven, ITensor(FUTensor[i],sites[i+1]',sites[i]',sites[i+1],sites[i]))
+    end
+
+    for i in 2:2:L
+        push!(gatesOdd, ITensor(FUTensor[i],sites[i+1]',sites[i]',sites[i+1],sites[i]))
+    end
+
+    gatesEven, gatesOdd
 end
 
 ########################################
