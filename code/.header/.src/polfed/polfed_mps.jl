@@ -1,158 +1,220 @@
 #######################################
-# POLFED with linear algebra functions
+# POLFED in the power basis (POLFED with matrix product states, Chapter 7)
 #######################################
 
 ###
-# The entire idea of Polfed is based on efficient matrix-vector multiplication.
-# Let's say we want the eigenvalues of the polynomial 1+U+U^2....+U^m
-# and with k krylov vectors.
-# then all of the rest of the operations can be expressed as linear algebra operations on the overlaps <psi_0|U^j\daggerU^i|psi_0>
-# where |psi_0> is the initial vector.
-# and i, j runs from 0 to mk
-
-# The following function calculates the overlap <psi_0|U^j\daggerU^i|psi_0>
-
-# Now in principle, the whole matrix can be generated just from the first column. For general purpose we will use this as the input to our algorithm.
-
-
-## just testing gitpush
-
-
-
-
-#####################################
-# Efficient generation of inner products
-#####################################  
-
-# Recall: one needs psi_0.... psi_{k-1}
-# Recall: for each degree m of the Polynomial there is m+1 term
-
-# wishlist: ideally should be able to generate the inner products in a single sweep (added in main body)
-
-using SparseArrays
+# Every Krylov vector of the Arnoldi algorithm on g_k(U) is a linear combination of
+#
+#   |0> = |E>,  |1> = U|E>,  |2> = U^2|E>, ...,  |N> = U^N|E>
+#
+# where |E> is the (random) initial state. Working in this (non-orthogonal, overcomplete) basis,
+# a vector is just its coefficients, and everything the Arnoldi algorithm needs reduces to
+#   - inner products, through the overlap matrix <i|j> = c_{j-i}, c_j = <E|U^j|E> (Hermitian Toeplitz)
+#   - applying g_k(U), a shift and sum of the coefficients
+#   - U|v>, a shift by one, for the eigenvalues <v|U|v>/<v|v>
+# so the only thing ever computed with the state is the first column c_0 ... c_N, from ONE time
+# evolution of |E> for N steps. No two states are ever added, so |E> can be an MPS as long as
+# the time evolution is cheap (the backend is brickwall_tev through floquet_step).
+#
+# Notation: k = order of the geometric sum, ncv = number of Krylov vectors
+# (Chapter 7 calls them m and k). The j-th Krylov vector has (j-1)k+1 coefficients.
+###
 
 
 #####################################
-# Now, since we are working in a non-orthogonal basis, we need to calculate the inner products of any two vectors
-# expressed in this basis, in terms of the overlaps <psi_0|U^j\daggerU^i|psi_0>
+# The first column of the overlap matrix: one time evolution
+#####################################
 
-# The following function calculates the inner product of two vectors in the basis of the overlaps <psi_0|U^j\daggerU^i|psi_0>
+# <a|b> for the state types the time evolution can return (DenseSwitch turns an MPS into an ITensor)
 
-# The input is the two indices i and j of the vectors, the coefficients of the vectors in the basis of the overlaps, and the overlaps themselves
+inner_state(a::MPS, b::MPS)=inner(a, b)
+inner_state(a::ITensor, b::ITensor)=(dag(a)*b)[]
+inner_state(a::AbstractVector, b::AbstractVector)=dot(a, b)
 
-# The output is the inner product of the two vectors
+function overlaps(U, psi0, N::Int)
 
-# The function is defined as follows:
+    c=zeros(ComplexF64, N+1)
+    psi=psi0
+    ref=psi0                                     # psi0 as the same type as psi (dense once switched)
 
-function inner_prod(vi,vj, overlap)
-    n_coeff=length(vi)
-    sum=0.0*im
-    for k in 1:n_coeff
-         for l in 1:n_coeff
-             sum=sum+conj(vi[k])*vj[l]*overlap[l,k]
-         end
-     end
-     return sum
- end
- 
-
-
-function inner_prod(i,j, coeff, overlap)
-   n_coeff=size(coeff)[2]
-   sum=0.0*im
-   for k in 1:n_coeff
-        for l in 1:n_coeff
-            sum=sum+conj(coeff[i,k])*coeff[j,l]*overlap[l,k]
-        end
+    c[1]=inner_state(ref, psi)
+    for j in 1:N
+        psi=floquet_step(U, psi)
+        (psi isa ITensor && ref isa MPS) && (ref=prod(psi0))     # DenseSwitch: compare against the dense psi0
+        c[j+1]=inner_state(ref, psi)
     end
-    return sum
+
+    c./=real(c[1])
+    c[1]=1.0                                     # c_0 = <E|E> = 1 exactly (Toeplitz needs it real)
+    return c
 end
 
 
+#####################################
+# Inner products in the power basis
+#####################################
+
+# <a|b> = sum_{i,j} a_i^* b_j <i|j>, coefficient vectors of any length (zero padded)
+# overlap: the overlap matrix (at least as large as the vectors), sliced dense, so for small checks
+
+function inner_prod(vi::AbstractVector, vj::AbstractVector, overlap)
+    n=max(length(vi), length(vj))
+    a=vcat(vi, zeros(ComplexF64, n-length(vi)))
+    b=vcat(vj, zeros(ComplexF64, n-length(vj)))
+    return dot(a, overlap[1:n, 1:n]*b)
+end
+
+# the same for rows i, j of a coefficient matrix (one Krylov vector per row)
+
+inner_prod(i::Int, j::Int, coeff::AbstractMatrix, overlap)=inner_prod(coeff[i, :], coeff[j, :], overlap)
+
+
 #############
-# And we need a way to apply the polynomial on the vector
+# Applying the polynomial on a vector in the power basis
 ###########
 
-function apply_polynomial(coeff,l, m, k, phi )
-    n_coeff=size(coeff)[2]
-    for i in 0:(m)*(l-2)
-        for j in 0:m
-         
-         coeff[l,(j+i+1)]+=(exp(im*phi)^j)*coeff[l-1,i+1]  # this step basically ammounts to applying the polynomial to the previous vector
-        end
-    end
+# g_k(U) sum_i a_i U^i|E> = sum_i sum_{m=0}^{k} e^{-i m phi} a_i U^{i+m}|E>, i.e a shift and sum:
+#   (g_k a)_n = sum_{m=0}^{k} e^{-i m phi} a_{n-m},   length(g_k a) = length(a) + k
 
-    return coeff
+function apply_polynomial(a::AbstractVector, k::Int, phi::Real)
+    n=length(a)
+    out=zeros(ComplexF64, n+k)
+    for m in 0:k
+        out[m+1:m+n] .+= exp(-im*m*phi) .* a
+    end
+    return out
 end
+
 
 #############
-# Now that we have the eigenvector of the Hessenberg matrix, we need to restore the eigenvector of the original matrix
-# The following function restores the eigenvectors of the original matrix from the eigenvectors of the Hessenberg matrix
+# Arnoldi in the power basis
+###########
 
+# returns the Hessenberg matrix H (ncv x ncv) and the Krylov vectors as columns of V (coefficients,
+# zero padded to n = ncv*k+1), from the overlaps c (length >= n). S = overlap(c[1:n]) is kept as a
+# Toeplitz matrix (S*v is an FFT product, never a dense n x n matrix), and S*v_i is kept for every
+# Krylov vector, so <v_i|w> = (S v_i)' w costs a dot product only.
 
-function restore_eigvecs(V, B)
-    N = size(V)[1]
-    # Ensure B is of size NxN
-    @assert size(B) == (N, N) "Matrix B should be NxN"
-    
-    # Initialize the result array to store the linear combinations of ITensors
-    #result = Vector{ITensor}(undef, N)
-    
-    result=zeros(ComplexF64, size(V))
+function arnoldi_power(c::AbstractVector, k::Int, ncv::Int, phi::Real)
 
-    for i in 1:N
-        for j in 1:N
-            result[i,:] .+= B[j, i] * V[j,:]  # Linear combination of ITensors
+    n=ncv*k+1
+    V=zeros(ComplexF64, n, ncv)
+    SV=zeros(ComplexF64, n, ncv)
+    H=zeros(ComplexF64, ncv+1, ncv)
+    Sn=overlap(c[1:n])
+
+    V[1, 1]=1.0                                  # |v_1> = |E>
+    SV[:, 1]=Sn*V[:, 1]
+
+    for j in 1:ncv
+        len=(j-1)*k+1                            # support of v_j
+        w=zeros(ComplexF64, n)
+        w[1:len+k]=apply_polynomial(V[1:len, j], k, phi)
+
+        for pass in 1:2                          # classical Gram-Schmidt, twice
+            h=SV[:, 1:j]'*w
+            H[1:j, j].+=h
+            w.-=V[:, 1:j]*h
+        end
+
+        H[j+1, j]=sqrt(max(real(dot(w, Sn*w)), 0.0))
+        if j<ncv
+            abs(H[j+1, j]) < 1e-14 && return H[1:j, 1:j], V[:, 1:j]
+            V[:, j+1]=w ./ H[j+1, j]
+            SV[:, j+1]=Sn*V[:, j+1]
         end
     end
-    
-    return result
+
+    return H[1:ncv, 1:ncv], V
 end
+
 
 #############
-# Finally we need to compute the eigenvalues of the original Unitary
-# Note that it is not necessary to compute the eigenvectors of the original Unitary, one can just read it off from the elements <i|j+1>
+# Restoring the eigenvectors (as coefficients in the power basis) from the eigenvectors W of H
+###########
+
+restore_eigvecs(V::AbstractMatrix, W::AbstractMatrix)=V*W
 
 
-function eigenvalues(eigvecscoeffs, overlap_m)
-    
-    eigenvallength=size(eigvecscoeffs,1)
+#############
+# The eigenvalues of U, from <psi|U|psi>/<psi|psi> with U|j> = |j+1>, i.e <i|U|j> = c_{j+1-i}
+###########
 
-    eigvalsfull=fill(0.0*im,eigenvallength)
-
-    ncoeffs=size(eigvecscoeffs,2)
-
-
-
-    for i in 1:eigenvallength
-        sum=0.0*im
-        sum_norm=0.0*im
-            for j in 1:ncoeffs
-                for l in 1:ncoeffs
-                sum+=conj(eigvecscoeffs[i,j])*eigvecscoeffs[i,l]*overlap_m[l,j+1]
-                sum_norm+=conj(eigvecscoeffs[i,j])*eigvecscoeffs[i,l]*overlap_m[l,j]
-            end
-
-        end
-    eigvalsfull[i]=sum/sum_norm
-    end
-
-    return eigvalsfull
+function eigenvalues(Y::AbstractMatrix, columneinz)
+    n=size(Y, 1)
+    S=overlap(columneinz[1:n])
+    S1=overlap_shift(columneinz, n)
+    return [dot(y, S1*y)/real(dot(y, S*y)) for y in eachcol(Y)]
 end
 
-function convergence(eigvecscoeffs, eigenvalues, overlap_m)
-    n=length(eigenvalues)
-    convergence_modulus = zeros(ComplexF64,n-1)
-    for i in 1:n-1
-        psi = eigvecscoeffs[i, :]
-        push!(psi, 0.0)
-        lambda = eigenvalues[i]
-        psi1=zeros(ComplexF64, length(psi))
-        for j in 1:length(psi)-1
-            psi1[j+1]=psi[j]
-        end
-        #inner_prod(psi1, psi1, overlap_m)
-        convergence_modulus[i] =  + abs.(lambda)^2 * inner_prod(psi, psi, overlap_m) #- conj.(lambda) * inner_prod(psi, psi1, overlap_m)-lambda*inner_prod(psi1, psi, overlap_m)
+
+#############
+# Convergence: ||U|psi> - omega|psi>|| for normalised |psi>
+#
+# Since U is unitary, ||U psi - omega psi||^2 = <psi|psi> (1 - |omega|^2) for omega = <psi|U|psi>/<psi|psi>,
+# so the residual follows from the eigenvalue alone (and is resolved down to ~ sqrt(machine precision))
+###########
+
+convergence(omega)=sqrt.(max.(1 .- abs2.(omega), 0.0))
+
+
+#############
+# Conditioning: kappa = ||y||^2 / <psi|psi>, coefficient norm against state norm
+#
+# The power basis is overcomplete (N > d) and its overlap matrix singular, so a vector can have
+# coefficients much larger than its norm. Every quadratic form above is then computed with a
+# relative error ~ kappa * (error of the c_j), which can fake |omega| ~ 1. An eigenpair is only
+# trusted if kappa * overlap_error < tol as well.
+###########
+
+function conditioning(Y::AbstractMatrix, columneinz)
+    n=size(Y, 1)
+    S=overlap(columneinz[1:n])
+    return [norm(y)^2/real(dot(y, S*y)) for y in eachcol(Y)]
+end
+
+
+#############
+# POLFED in the power basis
+###########
+
+# U: FloquetOperator (or a matrix), psi0: |E> (MPS, dense ITensor or Vector)
+# k: order of the geometric sum, ncv: number of Krylov vectors (k*ncv has to exceed the Hilbert space dimension)
+# phi: target, tol: residual, overlap_error: accuracy of the c_j (machine precision for an exact time
+# evolution, ~ sqrt of the discarded weight for a truncated one)
+# returns omega, residuals and kappa (converged only, closest to the target first), the coefficients of
+# the eigenvectors in the power basis, the overlaps c_j, and the number of Floquet steps (= ncv*k + 1)
+
+function polfed_mps(U, psi0; k::Int, ncv::Int, phi::Real=0.0, tol::Real=1e-5, overlap_error::Real=1e-14)
+
+    N=ncv*k+1
+    c=overlaps(U, psi0, N)
+
+    H, V = arnoldi_power(c, k, ncv, phi)
+    ritz, W = eigen(H)
+    Y=restore_eigvecs(V, W)
+
+    omega=eigenvalues(Y, c)
+    res=convergence(omega)
+    kap=conditioning(Y, c)
+
+    conv=findall((res .< tol) .& (kap .* overlap_error .< tol))
+    conv=conv[sortperm(abs.(omega[conv] .- exp(im*phi)))]
+
+    return (omega=omega[conv], residuals=res[conv], kappa=kap[conv], coeffs=Y[:, conv], c=c, nsteps=N)
+end
+
+
+#############
+# For checks: the eigenvector as a state, sum_j y_j U^j|E> (dense states only, one more time evolution)
+###########
+
+function power_state(U, psi0, y::AbstractVector)
+    psi=psi0
+    acc=y[1]*psi0
+    for j in 2:length(y)
+        psi=floquet_step(U, psi)
+        acc=acc + y[j]*psi
     end
-    return convergence_modulus
+    return acc/norm(acc)
 end
