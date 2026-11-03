@@ -155,7 +155,9 @@ end
 # so the residual follows from the eigenvalue alone (and is resolved down to ~ sqrt(machine precision))
 ###########
 
-convergence(omega)=sqrt.(max.(1 .- abs2.(omega), 0.0))
+# abs: in floating point a Rayleigh quotient can come out with |omega| > 1 (badly conditioned vectors),
+# which is just as far from an eigenpair
+convergence(omega)=sqrt.(abs.(1 .- abs2.(omega)))
 
 
 #############
@@ -185,10 +187,20 @@ end
 # returns omega, residuals and kappa (converged only, closest to the target first), the coefficients of
 # the eigenvectors in the power basis, the overlaps c_j, and the number of Floquet steps (= ncv*k + 1)
 
-function polfed_mps(U, psi0; k::Int, ncv::Int, phi::Real=0.0, tol::Real=1e-5, overlap_error::Real=1e-14)
+#
+# c: overlaps from an earlier run (length >= ncv*k+2) to skip the time evolution; one evolution of N
+# steps serves every (k, ncv) with ncv*k+1 <= N
+
+function polfed_mps(U, psi0; k::Int, ncv::Int, phi::Real=0.0, tol::Real=1e-5, overlap_error::Real=1e-14,
+                    c::Union{Nothing,AbstractVector}=nothing)
 
     N=ncv*k+1
-    c=overlaps(U, psi0, N)
+    if c===nothing
+        c=overlaps(U, psi0, N)
+    else
+        length(c) >= N+1 || error("polfed_mps: need at least ncv*k+2 = $(N+1) overlaps, got $(length(c))")
+        c=c[1:N+1]
+    end
 
     H, V = arnoldi_power(c, k, ncv, phi)
     ritz, W = eigen(H)
