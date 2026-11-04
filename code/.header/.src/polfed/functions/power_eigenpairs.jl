@@ -17,9 +17,9 @@ restore_eigvecs(V::AbstractMatrix, W::AbstractMatrix)=V*W
 
 function eigenvalues(Y::AbstractMatrix, columneinz)
     n=size(Y, 1)
-    S=overlap(columneinz[1:n])
-    S1=overlap_shift(columneinz, n)
-    return [dot(y, S1*y)/real(dot(y, S*y)) for y in eachcol(Y)]
+    S=overlap_factorized(columneinz, n)
+    S1=overlap_shift_factorized(columneinz, n)
+    return [dot(y, toeplitz_mul(S1, y, n))/real(dot(y, toeplitz_mul(S, y, n))) for y in eachcol(Y)]
 end
 
 
@@ -46,6 +46,6 @@ convergence(omega)=sqrt.(abs.(1 .- abs2.(omega)))
 
 function conditioning(Y::AbstractMatrix, columneinz)
     n=size(Y, 1)
-    S=overlap(columneinz[1:n])
-    return [norm(y)^2/real(dot(y, S*y)) for y in eachcol(Y)]
+    S=overlap_factorized(columneinz, n)
+    return [norm(y)^2/real(dot(y, toeplitz_mul(S, y, n))) for y in eachcol(Y)]
 end

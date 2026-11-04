@@ -66,6 +66,33 @@ end
 
 
 #############
+# The pi pairs of the time crystal: eigenvalues around phi and around phi + pi from the same overlaps
+#
+# The target only enters the Krylov part (the phases of g_k), so one time evolution serves any target.
+# In the time crystal the eigenstates come in pairs with quasienergies epsilon and epsilon + pi
+# (+ an exponentially small splitting), so the second target gives the partners of the first. Not
+# possible in the normal POLFED without a second run, since there the Krylov vectors are states.
+# returns both runs (near: around phi, far: around phi + pi), and for every eigenvalue omega of near
+# its partner (the eigenvalue of far closest to -omega) and the pi pair splitting |arg(-partner/omega)|
+###########
+
+function polfed_mps_pairs(U, psi0; k::Int, ncv::Int, phi::Real=0.0, c::Union{Nothing,AbstractVector}=nothing, kwargs...)
+
+    near=polfed_mps(U, psi0; k=k, ncv=ncv, phi=phi, c=c, kwargs...)
+    far=polfed_mps(U, psi0; k=k, ncv=ncv, phi=phi+pi, c=near.c, kwargs...)
+
+    partner=ComplexF64[]; splitting=Float64[]
+    for w in near.omega
+        isempty(far.omega) && break
+        p=far.omega[argmin(abs.(far.omega .+ w))]
+        push!(partner, p); push!(splitting, abs(angle(-p/w)))
+    end
+
+    return (near=near, far=far, partner=partner, splitting=splitting)
+end
+
+
+#############
 # For checks: the eigenvector as a state, sum_j y_j U^j|E> (dense states only, one more time evolution)
 ###########
 

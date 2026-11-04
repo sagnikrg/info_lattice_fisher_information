@@ -37,3 +37,18 @@ function overlap_shift(columneinz, n::Int)
 
     return Toeplitz(first_column, first_row)
 end
+
+
+######################################
+# Factorised Toeplitz matrices, for many products with the same matrix
+######################################
+
+# S*x with the Toeplitz type plans the FFT (FFTW) and transforms the embedding of S again for every
+# product. factorize(S) does both once (2 FFTs per product instead of 3, and no planning), so it is
+# kept for the whole Krylov part. x may be shorter than S (zero padded).
+
+overlap_factorized(columneinz, n::Int)=factorize(overlap(columneinz[1:n]))
+overlap_shift_factorized(columneinz, n::Int)=factorize(overlap_shift(columneinz, n))
+
+toeplitz_mul!(y::AbstractVector, F, x::AbstractVector)=mul!(y, F, x, true, false)
+toeplitz_mul(F, x::AbstractVector, n::Int)=toeplitz_mul!(zeros(ComplexF64, n), F, x)

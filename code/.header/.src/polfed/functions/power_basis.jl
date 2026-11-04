@@ -54,12 +54,19 @@ inner_prod(i::Int, j::Int, coeff::AbstractMatrix, overlap)=inner_prod(coeff[i, :
 
 # g_k(U) sum_i a_i U^i|E> = sum_i sum_{m=0}^{k} e^{-i m phi} a_i U^{i+m}|E>, i.e a shift and sum:
 #   (g_k a)_n = sum_{m=0}^{k} e^{-i m phi} a_{n-m},   length(g_k a) = length(a) + k
+# a sliding window, computed as a running sum in O(n) instead of k+1 shifted copies in O(k n):
+#   s_n = e^{-i phi} s_{n-1} + a_n - e^{-i (k+1) phi} a_{n-k-1}
 
 function apply_polynomial(a::AbstractVector, k::Int, phi::Real)
     n=length(a)
     out=zeros(ComplexF64, n+k)
-    for m in 0:k
-        out[m+1:m+n] .+= exp(-im*m*phi) .* a
+    z=exp(-im*phi); zk=exp(-im*(k+1)*phi)
+    s=zero(ComplexF64)
+    for i in 1:n+k
+        s=z*s
+        i <= n && (s+=a[i])
+        i > k+1 && (s-=zk*a[i-k-1])
+        out[i]=s
     end
     return out
 end
@@ -70,9 +77,11 @@ end
 ###########
 
 # returns the Hessenberg matrix H (ncv x ncv) and the Krylov vectors as columns of V (coefficients,
-# zero padded to n = ncv*k+1), from the overlaps c (length >= n). S = overlap(c[1:n]) is kept as a
-# Toeplitz matrix (S*v is an FFT product, never a dense n x n matrix), and S*v_i is kept for every
-# Krylov vector, so <v_i|w> = (S v_i)' w costs a dot product only.
+# zero padded to n = ncv*k+1), from the overlaps c (length >= n). S = overlap(c[1:n]) is a Toeplitz
+# matrix, factorised once (S*v as an FFT product with a cached plan, never a dense n x n matrix), and
+# S*v_i is kept for every Krylov vector, so <v_i|w> = (S v_i)' w costs a dot product only.
+# The j-th Krylov vector has (j-1)k+1 nonzero coefficients (staircase), so the Gram-Schmidt only runs
+# over the support of the new vector, and S w is computed once per step (for its norm and for S v_{j+1}).
 
 function arnoldi_power(c::AbstractVector, k::Int, ncv::Int, phi::Real)
 
@@ -80,27 +89,30 @@ function arnoldi_power(c::AbstractVector, k::Int, ncv::Int, phi::Real)
     V=zeros(ComplexF64, n, ncv)
     SV=zeros(ComplexF64, n, ncv)
     H=zeros(ComplexF64, ncv+1, ncv)
-    Sn=overlap(c[1:n])
+    F=overlap_factorized(c, n)
 
     V[1, 1]=1.0                                  # |v_1> = |E>
-    SV[:, 1]=Sn*V[:, 1]
+    toeplitz_mul!(view(SV, :, 1), F, view(V, :, 1))
+    Sw=zeros(ComplexF64, n)
 
     for j in 1:ncv
         len=(j-1)*k+1                            # support of v_j
+        lw=min(len+k, n)                         # support of g_k v_j, and of everything subtracted from it
         w=zeros(ComplexF64, n)
-        w[1:len+k]=apply_polynomial(V[1:len, j], k, phi)
+        w[1:lw]=apply_polynomial(view(V, 1:len, j), k, phi)[1:lw]
 
         for pass in 1:2                          # classical Gram-Schmidt, twice
-            h=SV[:, 1:j]'*w
+            h=view(SV, 1:lw, 1:j)'*view(w, 1:lw)
             H[1:j, j].+=h
-            w.-=V[:, 1:j]*h
+            view(w, 1:lw) .-= view(V, 1:lw, 1:j)*h
         end
 
-        H[j+1, j]=sqrt(max(real(dot(w, Sn*w)), 0.0))
+        toeplitz_mul!(Sw, F, w)
+        H[j+1, j]=sqrt(max(real(dot(view(w, 1:lw), view(Sw, 1:lw))), 0.0))
         if j<ncv
             abs(H[j+1, j]) < 1e-14 && return H[1:j, 1:j], V[:, 1:j]
             V[:, j+1]=w ./ H[j+1, j]
-            SV[:, j+1]=Sn*V[:, j+1]
+            SV[:, j+1]=Sw ./ H[j+1, j]
         end
     end
 
