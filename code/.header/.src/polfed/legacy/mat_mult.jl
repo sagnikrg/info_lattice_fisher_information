@@ -1,7 +1,3 @@
-
-include("overlap.jl")
-
-
 ################################
 # Overlap times Abstract vector
 ################################
@@ -35,4 +31,3 @@ function inner_prod(vi::AbstractVector ,vj::AbstractVector)
     return sum(conj(vi[1:m]) .* vj[1:m])
 
 end
- 
