@@ -41,5 +41,30 @@ function GUE(n)
     U
 end
 
-     
+
+
+
+#Circular Ensembles
+
+#Haar random unitary: QR of a complex Ginibre matrix, phases of R divided out
+
+function CUE(n)
+
+    F=qr(randn(ComplexF64,n,n));
+    d=diag(F.R);
+
+    Matrix(F.Q)*Diagonal(d./abs.(d))
+end
+
+
+#Symmetric unitary, time reversal invariant
+
+function COE(n)
+
+    W=CUE(n);
+
+    transpose(W)*W
+end
+
+
 ;
