@@ -64,6 +64,7 @@
 !data/majorana/canonical_plot.hdf5
 !data/majorana/edge_ed.hdf5
 !data/majorana/free_scan.hdf5
+!data/majorana/gh_edge.hdf5
 !data/majorana/*.txt
 # raw: E:/info_lattice_fisher_information/rawdata/majorana/L*/canonical.hdf5 (script.canonical.jl)
 data/majorana/canonical.hdf5
