@@ -1,14 +1,17 @@
 # ED survey of the canonical driven Kitaev chain in spin language (canonical.jl)
-# usage: julia -t 1 script.canonical.jl  -> data/majorana/canonical.hdf5, log_canonical.txt
+# usage: julia -t 1 script.canonical.jl  -> raw E:/info_lattice_fisher_information/rawdata/majorana/L$L/canonical.hdf5,
+#        log data/majorana/log_canonical.txt; then post.canonical.jl -> plotdata
 using HDF5
 include("canonical.jl")
 const OUT = joinpath(@__DIR__, "../../data/majorana")
+const RAW = "E:/info_lattice_fisher_information/rawdata/majorana"
 const NR = Dict(8 => 200, 10 => 30, 12 => 5)
 logf(s) = (open(joinpath(OUT, "log_canonical.txt"), "a") do io; println(io, s); end; println(s))
 for L in (8, 10, 12), pt in POINTS
     rng = MersenneTwister(1000L + findfirst(==(pt), POINTS))
     t = @elapsed rs = [diagnose(realisation(pt, L, rng), L) for _ in 1:NR[L]]
-    h5open(joinpath(OUT, "canonical.hdf5"), "cw") do f
+    mkpath(joinpath(RAW, "L$L"))
+    h5open(joinpath(RAW, "L$L", "canonical.hdf5"), "cw") do f
         gname = "L$L/$(pt[1])"; haskey(f, gname) && delete_object(f, gname)
         gr = create_group(f, gname)
         for k in (:psd_even, :psd_odd, :edge_pi, :edge_0, :bulk_pi, :bulk_0)
