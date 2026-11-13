@@ -1,0 +1,12 @@
+theta=0.0 g=0.05 done, 66 seconds
+theta=0.35 g=0.5 done, 121 seconds
+theta=0.0 g=0.95 done, 177 seconds
+theta=0.0 g=0.1 done, 232 seconds
+theta=0.0 g=0.2 done, 285 seconds
+theta=0.0 g=0.3 done, 337 seconds
+theta=0.0 g=0.4 done, 389 seconds
+theta=0.0 g=0.5 done, 441 seconds
+theta=0.0 g=0.6 done, 492 seconds
+theta=0.0 g=0.7 done, 540 seconds
+theta=0.0 g=0.8 done, 588 seconds
+theta=0.0 g=0.9 done, 635 seconds
