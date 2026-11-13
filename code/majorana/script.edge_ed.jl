@@ -9,14 +9,17 @@ fname = joinpath(out, "edge_ed.hdf5")
 gs = [0.0, 0.05, 0.1, 0.2, 0.3, 0.7, 0.8, 0.9, 0.95, 1.0]; T = 400; tl = 201:401
 Random.seed!(7)
 for L in (8, 10), hon in (false, true), theta in (0.0, 0.1, 0.2, 0.3)
+    grp = "L$L/h$(Int(hon))/theta$theta"
+    isfile(fname) && h5open(f -> haskey(f, grp), fname, "r") && continue   # resume after an interruption
     NR = L == 10 ? 16 : 100
     Api = zeros(length(gs), NR); A0 = similar(Api)
-    for (ig, g) in enumerate(gs), r in 1:NR
-        J = rand(L - 1) * pi; h = hon ? rand(L) * 2pi : zeros(L)
+    Threads.@threads for k in 1:length(gs) * NR
+        ig, r = divrem(k - 1, NR) .+ 1; g = gs[ig]
+        rng = Xoshiro(hash((L, hon, theta, ig, r)))
+        J = rand(rng, L - 1) * pi; h = hon ? rand(rng, L) * 2pi : zeros(L)
         C = edge_autocorr_ed(circuit_ctrl(L, theta, g, h, J), 1, T, L)
         Api[ig, r] = mean(((-1) .^ (tl .- 1)) .* C[tl]); A0[ig, r] = mean(C[tl])
     end
-    grp = "L$L/h$(Int(hon))/theta$theta"
     h5open(fname, "cw") do f
         haskey(f, grp) && delete_object(f, grp)
         f["$grp/Api"] = Api; f["$grp/A0"] = A0; haskey(f, "g") || (f["g"] = gs)
